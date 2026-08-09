@@ -7,9 +7,11 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.util.Base64;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -17,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Integration tests for RestApiClassSource using MockWebServer.
  * Tests actual HTTP communication without requiring a real REST API.
  */
+@Timeout(value = 60, unit = TimeUnit.SECONDS)
 class RestApiClassSourceIntegrationTest {
 
     private MockWebServer server;
@@ -53,7 +56,8 @@ class RestApiClassSourceIntegrationTest {
 
         assertArrayEquals(classData, result);
 
-        RecordedRequest request = server.takeRequest();
+        RecordedRequest request = server.takeRequest(5, TimeUnit.SECONDS);
+        assertNotNull(request, "Expected a request to the mock server");
         assertEquals("GET", request.getMethod());
         assertTrue(request.getPath().contains("TestClass.class"));
     }
@@ -97,7 +101,8 @@ class RestApiClassSourceIntegrationTest {
 
         source.loadClassData("TestClass");
 
-        RecordedRequest request = server.takeRequest();
+        RecordedRequest request = server.takeRequest(5, TimeUnit.SECONDS);
+        assertNotNull(request, "Expected a request to the mock server");
         assertEquals("secret-key-123", request.getHeader("X-API-Key"));
         assertEquals("custom-value", request.getHeader("X-Custom-Header"));
     }
@@ -119,7 +124,8 @@ class RestApiClassSourceIntegrationTest {
 
         source.loadClassData("TestClass");
 
-        RecordedRequest request = server.takeRequest();
+        RecordedRequest request = server.takeRequest(5, TimeUnit.SECONDS);
+        assertNotNull(request, "Expected a request to the mock server");
         String path = request.getPath();
         assertTrue(path.contains("version=1.0"));
         assertTrue(path.contains("format=binary"));
@@ -141,7 +147,8 @@ class RestApiClassSourceIntegrationTest {
 
         source.loadClassData("TestClass");
 
-        RecordedRequest request = server.takeRequest();
+        RecordedRequest request = server.takeRequest(5, TimeUnit.SECONDS);
+        assertNotNull(request, "Expected a request to the mock server");
         String authHeader = request.getHeader("Authorization");
         assertNotNull(authHeader);
         assertTrue(authHeader.startsWith("Basic "));
@@ -168,7 +175,8 @@ class RestApiClassSourceIntegrationTest {
 
         source.loadClassData("TestClass");
 
-        RecordedRequest request = server.takeRequest();
+        RecordedRequest request = server.takeRequest(5, TimeUnit.SECONDS);
+        assertNotNull(request, "Expected a request to the mock server");
         String authHeader = request.getHeader("Authorization");
         assertEquals("Bearer my-secret-token", authHeader);
     }
@@ -243,7 +251,8 @@ class RestApiClassSourceIntegrationTest {
 
         source.loadClassData("com.example.TestClass");
 
-        RecordedRequest request = server.takeRequest();
+        RecordedRequest request = server.takeRequest(5, TimeUnit.SECONDS);
+        assertNotNull(request, "Expected a request to the mock server");
         String path = request.getPath();
         assertTrue(path.contains("api/v1/classes/com/example/TestClass"));
     }
@@ -282,7 +291,8 @@ class RestApiClassSourceIntegrationTest {
 
         source.loadClassData("com.example.util.StringHelper");
 
-        RecordedRequest request = server.takeRequest();
+        RecordedRequest request = server.takeRequest(5, TimeUnit.SECONDS);
+        assertNotNull(request, "Expected a request to the mock server");
         String path = request.getPath();
         assertTrue(path.contains("com/example/util/StringHelper.class"));
     }
@@ -295,13 +305,15 @@ class RestApiClassSourceIntegrationTest {
 
         source = RestApiClassSource.builder()
             .baseUrl(server.url("/").toString())
+            .enableCanLoadCheck(true)
             .build();
 
         boolean result = source.canLoad("TestClass");
 
         assertTrue(result);
 
-        RecordedRequest request = server.takeRequest();
+        RecordedRequest request = server.takeRequest(5, TimeUnit.SECONDS);
+        assertNotNull(request, "Expected a HEAD request to the mock server");
         assertEquals("HEAD", request.getMethod());
     }
 
@@ -313,6 +325,7 @@ class RestApiClassSourceIntegrationTest {
 
         source = RestApiClassSource.builder()
             .baseUrl(server.url("/").toString())
+            .enableCanLoadCheck(true)
             .build();
 
         boolean result = source.canLoad("MissingClass");
